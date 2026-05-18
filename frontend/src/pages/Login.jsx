@@ -21,7 +21,7 @@ function Login() {
             });
             alert(response.data); // Backend'den gelen "Kayıt başarılı" mesajını ekranda göster
         } catch (error) {
-            alert("Kayıt başarısız! " + error.response?.data?.message || "Bir hata oluştu.");
+            alert("Kayıt başarısız! " + (error.response?.data?.message || error.response?.data || "Bir hata oluştu."));
         }
     };
 
