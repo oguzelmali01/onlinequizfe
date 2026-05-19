@@ -38,6 +38,33 @@ function QuizDetail() {
         fetchQuizDetail();
     }, [id]);
 
+    // Zamanlayıcı geri sayım efekti
+    useEffect(() => {
+        if (timeLeft === null || timeLeft <= 0) return;
+
+        timerRef.current = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timerRef.current);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, [timeLeft === null]);
+
+    // Format zaman
+    const formatTime = (seconds) => {
+        if (seconds === null) return "";
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    };
+
     const handleOptionSelect = (questionId, option) => {
         setAnswers(prevAnswers => ({
             ...prevAnswers,
@@ -80,6 +107,15 @@ function QuizDetail() {
             alert("Sınav gönderilirken bir hata oluştu: " + (error.response?.data?.message || error.response?.data || "Bilinmeyen hata"));
         }
     };
+
+    // Süre dolduğunda otomatik submit
+    useEffect(() => {
+        if (timeLeft === 0) {
+            alert("Süreniz doldu! Sınavınız otomatik olarak gönderiliyor.");
+            handleSubmit();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timeLeft]);
 
     if (loading) {
         return (
@@ -128,7 +164,7 @@ function QuizDetail() {
                     left: 0,
                     right: 0,
                     height: '320px',
-                    background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+                    background: 'linear-gradient(135deg, #0e5cad 0%, #208eed 100%)',
                     borderBottomLeftRadius: '40px',
                     borderBottomRightRadius: '40px',
                     zIndex: 0
@@ -138,7 +174,7 @@ function QuizDetail() {
                 <div style={{ position: 'relative', zIndex: 1, padding: '40px 25px' }}>
                     
                     {/* Üst Bar (Geri Tuşu & Başlık) */}
-                    <div style={{ display: 'flex', alignItems: 'center', color: 'white', marginBottom: '35px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', color: 'white', marginBottom: '20px' }}>
                         <button 
                             onClick={() => navigate('/quizzes')}
                             style={{ 
@@ -161,6 +197,23 @@ function QuizDetail() {
                             {quiz.title}
                         </h2>
                     </div>
+
+                    {/* Süre Göstergesi */}
+                    {timeLeft !== null && (
+                        <div style={{ 
+                            textAlign: 'center', 
+                            color: timeLeft <= 60 ? '#ff7675' : '#e0e7ff', 
+                            marginBottom: '15px', 
+                            fontSize: '1.2em', 
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}>
+                            ⏳ {formatTime(timeLeft)}
+                        </div>
+                    )}
 
                     {/* Soru Göstergesi */}
                     <div style={{ textAlign: 'center', color: '#e0e7ff', marginBottom: '20px', fontSize: '0.95em', fontWeight: '500' }}>
@@ -256,11 +309,11 @@ function QuizDetail() {
                                     padding: '16px 35px',
                                     borderRadius: '16px',
                                     border: 'none',
-                                    background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+                                    background: 'linear-gradient(135deg, #0e5cad 0%, #208eed 100%)',
                                     color: 'white',
                                     fontWeight: '700',
                                     cursor: 'pointer',
-                                    boxShadow: '0 8px 20px rgba(42, 82, 152, 0.4)',
+                                    boxShadow: '0 8px 20px rgba(32, 142, 237, 0.4)',
                                     transition: 'transform 0.1s'
                                 }}
                             >

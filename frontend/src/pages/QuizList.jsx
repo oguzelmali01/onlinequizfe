@@ -49,41 +49,66 @@ function QuizList() {
         navigate('/');
     };
 
+    const [selectedCategory, setSelectedCategory] = useState("Tümü");
+
     if (loading) {
         return <div style={{ textAlign: 'center', marginTop: '50px', fontSize: '1.2em' }}>Sayfa yükleniyor... Lütfen bekleyin.</div>;
     }
 
+    // Benzersiz kategorileri bul
+    const categories = ["Tümü", ...new Set(quizzes.map(q => q.category ? q.category.trim() : "Kategorisiz"))];
+
+    // Filtrelenmiş sınavlar
+    const filteredQuizzes = selectedCategory === "Tümü"
+        ? quizzes
+        : quizzes.filter(q => {
+            const cat = q.category ? q.category.trim() : "Kategorisiz";
+            return cat === selectedCategory;
+        });
+
     return (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 20px', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
-            
+
             {/* Üst Kısım: Başlık ve Profil Bilgisi */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', paddingBottom: '20px', borderBottom: '2px solid #ecf0f1' }}>
-                <h1 style={{ margin: 0, color: '#2c3e50' }}>📚 Sınav Merkezi</h1>
-                
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '40px',
+                padding: '25px 30px',
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, #0e5cad 0%, #208eed 100%)',
+                color: 'white',
+                boxShadow: '0 10px 25px rgba(32, 142, 237, 0.2)'
+            }}>
+                <h1 style={{ margin: 0, color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>Online Quiz Platform</h1>
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     {userProfile && (
-                        <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f1f8ff', padding: '10px 20px', borderRadius: '30px', border: '1px solid #cce5ff' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.15)', padding: '10px 20px', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(5px)' }}>
                             <div style={{ marginRight: '15px' }}>
-                                <span style={{ display: 'block', fontSize: '0.9em', color: '#5c6ac4' }}>Hoş Geldin,</span>
-                                <strong style={{ color: '#2c3e50', fontSize: '1.1em' }}>{userProfile.username}</strong>
+                                <span style={{ display: 'block', fontSize: '0.9em', color: 'rgba(255,255,255,0.8)' }}>Hoş Geldin,</span>
+                                <strong style={{ color: 'white', fontSize: '1.1em' }}>{userProfile.username}</strong>
                             </div>
-                            <div style={{ backgroundColor: '#5c6ac4', color: 'white', padding: '5px 15px', borderRadius: '20px', fontWeight: 'bold', marginRight: '10px' }}>
+                            <div style={{ backgroundColor: '#f1c40f', color: '#8e44ad', padding: '5px 15px', borderRadius: '20px', fontWeight: '900', marginRight: '5px', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}>
                                 🏆 {userProfile.totalScore} Puan
                             </div>
                         </div>
                     )}
-                    
-                    <button onClick={() => navigate('/profile')} style={{ padding: '10px 20px', cursor: 'pointer', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', transition: 'background-color 0.2s' }}>
+
+                    <button onClick={() => navigate('/profile')} style={{ padding: '10px 20px', cursor: 'pointer', backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '6px', fontWeight: 'bold', transition: 'background-color 0.2s', backdropFilter: 'blur(5px)' }}
+                        onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.3)'}
+                        onMouseOut={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.2)'}>
                         Profil & Geçmiş
                     </button>
 
                     {userProfile?.role === 'ADMIN' && (
-                        <button onClick={() => navigate('/admin')} style={{ padding: '10px 20px', cursor: 'pointer', backgroundColor: '#8e44ad', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', transition: 'background-color 0.2s' }}>
+                        <button onClick={() => navigate('/admin')} style={{ padding: '10px 20px', cursor: 'pointer', backgroundColor: '#9b59b6', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', transition: 'background-color 0.2s', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}>
                             Yönetici Paneli
                         </button>
                     )}
 
-                    <button onClick={handleLogout} style={{ padding: '10px 20px', cursor: 'pointer', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', transition: 'background-color 0.2s' }}>
+                    <button onClick={handleLogout} style={{ padding: '10px 20px', cursor: 'pointer', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', transition: 'background-color 0.2s', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}>
                         Çıkış Yap
                     </button>
                 </div>
@@ -92,14 +117,26 @@ function QuizList() {
             <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
                 {/* Sol Kısım: Sınav Listesi */}
                 <div style={{ flex: '3', minWidth: '300px' }}>
-                    <h2 style={{ color: '#34495e', marginBottom: '20px' }}>Mevcut Sınavlar</h2>
-                    {quizzes.length === 0 ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <h2 style={{ color: '#34495e', margin: 0 }}>Mevcut Sınavlar</h2>
+                        <select
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            style={{ padding: '10px 15px', borderRadius: '8px', border: '1px solid #bdc3c7', outline: 'none', backgroundColor: '#fff', color: '#2c3e50', fontWeight: 'bold', cursor: 'pointer' }}
+                        >
+                            {categories.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {filteredQuizzes.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '50px', backgroundColor: '#f8f9fa', borderRadius: '10px', color: '#7f8c8d' }}>
-                            Henüz sistemde hiç sınav bulunmuyor.
+                            {selectedCategory === "Tümü" ? "Henüz sistemde hiç sınav bulunmuyor." : "Bu kategoride henüz sınav bulunmuyor."}
                         </div>
                     ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-                            {quizzes.map((quiz) => (
+                            {filteredQuizzes.map((quiz) => (
                                 <div key={quiz.id} style={{
                                     border: '1px solid #e1e8ed',
                                     borderRadius: '12px',
@@ -111,7 +148,12 @@ function QuizList() {
                                     justifyContent: 'space-between'
                                 }}>
                                     <div>
-                                        <h3 style={{ marginTop: '0', color: '#2c3e50', fontSize: '1.3em', marginBottom: '10px' }}>{quiz.title}</h3>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                            <h3 style={{ marginTop: '0', color: '#2c3e50', fontSize: '1.3em', margin: 0 }}>{quiz.title}</h3>
+                                            <span style={{ backgroundColor: '#ecf0f1', color: '#7f8c8d', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75em', fontWeight: 'bold' }}>
+                                                {quiz.category || "Kategorisiz"}
+                                            </span>
+                                        </div>
                                         <p style={{ color: '#7f8c8d', lineHeight: '1.5', marginBottom: '20px', fontSize: '0.95em' }}>
                                             {quiz.description || "Bu sınav için bir açıklama bulunmuyor."}
                                         </p>
@@ -147,26 +189,26 @@ function QuizList() {
                         <h2 style={{ color: '#f39c12', marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '2px solid #fcf3cf', paddingBottom: '10px' }}>
                             👑 En İyiler
                         </h2>
-                        
+
                         {leaderboard.length === 0 ? (
                             <p style={{ color: '#7f8c8d', textAlign: 'center' }}>Henüz kimse puan kazanmadı.</p>
                         ) : (
                             <ul style={{ listStyleType: 'none', padding: 0, margin: 0 }}>
                                 {leaderboard.map((user, index) => (
-                                    <li key={user.id} style={{ 
-                                        display: 'flex', 
-                                        justifyContent: 'space-between', 
+                                    <li key={user.id} style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
                                         alignItems: 'center',
                                         padding: '12px 0',
                                         borderBottom: index !== leaderboard.length - 1 ? '1px solid #f1f2f6' : 'none'
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <span style={{ 
-                                                width: '24px', 
-                                                height: '24px', 
-                                                display: 'flex', 
-                                                justifyContent: 'center', 
-                                                alignItems: 'center', 
+                                            <span style={{
+                                                width: '24px',
+                                                height: '24px',
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
                                                 backgroundColor: index === 0 ? '#f1c40f' : index === 1 ? '#bdc3c7' : index === 2 ? '#cd7f32' : '#ecf0f1',
                                                 color: index <= 2 ? 'white' : '#7f8c8d',
                                                 borderRadius: '50%',
@@ -187,7 +229,7 @@ function QuizList() {
                     </div>
                 </div>
             </div>
-            
+
         </div>
     );
 }

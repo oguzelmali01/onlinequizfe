@@ -25,10 +25,29 @@ function Profile() {
                 setUser(userRes.data);
                 
                 // Tarihe göre artan sıraya (eskiden yeniye) dizebiliriz grafik için
-                const reversedHistory = [...historyRes.data].reverse().map(item => ({
-                    ...item,
-                    displayDate: new Date(item.attemptDate).toLocaleDateString()
-                }));
+                let runningTotal = 0;
+                const maxScoresPerQuiz = {};
+
+                const reversedHistory = [...historyRes.data].reverse().map(item => {
+                    let netGain = 0;
+                    const prevMax = maxScoresPerQuiz[item.quiz.id] || 0;
+                    if (item.score > prevMax) {
+                        netGain = item.score - prevMax;
+                        maxScoresPerQuiz[item.quiz.id] = item.score;
+                    }
+                    runningTotal += netGain;
+
+                    return {
+                        ...item,
+                        // Tarih ve saati birleştirerek eşsiz bir X ekseni etiketi oluşturuyoruz
+                        displayDate: new Date(item.attemptDate).toLocaleString('tr-TR', { 
+                            day: '2-digit', month: '2-digit', year: 'numeric', 
+                            hour: '2-digit', minute: '2-digit' 
+                        }),
+                        netGain: netGain, // Bu sınavdan kazandığı NET puan
+                        cumulativeScore: runningTotal // O anki genel toplam puanı
+                    };
+                });
                 
                 setHistory(reversedHistory);
                 setLoading(false);
@@ -44,6 +63,37 @@ function Profile() {
         fetchProfileData();
     }, [navigate]);
 
+    const handleDeleteProfile = async () => {
+        if (window.confirm("Profilinizi silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve tüm geçmiş verileriniz silinir!")) {
+            try {
+                const token = localStorage.getItem('token');
+                await axios.delete('http://localhost:8080/api/users/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                alert("Profiliniz başarıyla silindi.");
+                localStorage.removeItem('token');
+                navigate('/');
+            } catch (error) {
+                console.error("Profil silinirken hata oluştu!", error);
+                alert("Profil silinirken bir hata oluştu.");
+            }
+        }
+    };
+
+    // Custom Tooltip for Chart
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+            return (
+                <div style={{ backgroundColor: '#fff', padding: '10px 15px', borderRadius: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', border: '1px solid #ecf0f1' }}>
+                    <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', color: '#2c3e50' }}>{label}</p>
+                    <p style={{ margin: '0 0 5px 0', color: '#5c6ac4' }}>Genel Puan: <strong>{payload[0].payload.cumulativeScore}</strong></p>
+                    <p style={{ margin: 0, color: '#27ae60' }}>Bu Sınavdan Kazanılan: <strong>+{payload[0].payload.netGain}</strong></p>
+                </div>
+            );
+        }
+        return null;
+    };
+
     if (loading) return <div style={{ textAlign: 'center', marginTop: '50px' }}>Yükleniyor...</div>;
     if (!user) return <div style={{ textAlign: 'center', marginTop: '50px' }}>Kullanıcı bulunamadı!</div>;
 
@@ -51,9 +101,14 @@ function Profile() {
         <div style={{ maxWidth: '900px', margin: '0 auto', padding: '30px 20px', fontFamily: '"Segoe UI", Roboto, sans-serif' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                 <h1 style={{ color: '#2c3e50', margin: 0 }}>👤 Profilim & Geçmişim</h1>
-                <button onClick={() => navigate('/quizzes')} style={{ padding: '10px 20px', cursor: 'pointer', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}>
-                    Sınavlara Dön
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={handleDeleteProfile} style={{ padding: '10px 20px', cursor: 'pointer', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}>
+                        Profili Sil
+                    </button>
+                    <button onClick={() => navigate('/quizzes')} style={{ padding: '10px 20px', cursor: 'pointer', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}>
+                        Sınavlara Dön
+                    </button>
+                </div>
             </div>
 
             <div style={{ backgroundColor: '#fff', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', marginBottom: '30px', display: 'flex', gap: '30px', alignItems: 'center' }}>
@@ -70,15 +125,15 @@ function Profile() {
 
             {history.length > 0 ? (
                 <div>
-                    <h2 style={{ color: '#34495e', marginBottom: '20px' }}>📈 Başarı Grafiği</h2>
+                    <h2 style={{ color: '#34495e', marginBottom: '20px' }}>📈 Başarı Grafiği (Genel Puan Gelişimi)</h2>
                     <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', marginBottom: '30px', height: '300px' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={history}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ecf0f1" />
                                 <XAxis dataKey="displayDate" axisLine={false} tickLine={false} />
                                 <YAxis axisLine={false} tickLine={false} />
-                                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} />
-                                <Line type="monotone" dataKey="score" name="Alınan Puan" stroke="#5c6ac4" strokeWidth={4} dot={{ r: 6, fill: '#5c6ac4', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 8 }} />
+                                <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}} />
+                                <Line type="monotone" dataKey="cumulativeScore" name="Genel Puan" stroke="#5c6ac4" strokeWidth={4} dot={{ r: 6, fill: '#5c6ac4', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 8 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -92,6 +147,7 @@ function Profile() {
                                     <th style={{ padding: '15px 20px', color: '#7f8c8d', fontWeight: '600' }}>Sınav Adı</th>
                                     <th style={{ padding: '15px 20px', color: '#7f8c8d', fontWeight: '600' }}>Doğru Sayısı</th>
                                     <th style={{ padding: '15px 20px', color: '#7f8c8d', fontWeight: '600' }}>Sınav Sonucu</th>
+                                    <th style={{ padding: '15px 20px', color: '#7f8c8d', fontWeight: '600' }}>Genel Skorun</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -101,6 +157,7 @@ function Profile() {
                                         <td style={{ padding: '15px 20px', color: '#2c3e50', fontWeight: '500' }}>{attempt.quiz.title}</td>
                                         <td style={{ padding: '15px 20px', color: '#3498db' }}>{attempt.correctAnswers} / {attempt.totalQuestions}</td>
                                         <td style={{ padding: '15px 20px', color: '#27ae60', fontWeight: 'bold' }}>{attempt.score}</td>
+                                        <td style={{ padding: '15px 20px', color: '#8e44ad', fontWeight: 'bold' }}>{attempt.cumulativeScore}</td>
                                     </tr>
                                 ))}
                             </tbody>
