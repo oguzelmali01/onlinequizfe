@@ -2,27 +2,38 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+/**
+ * QuizDetail Bileşeni
+ * Öğrencilerin sınava girdiği, soruları tek tek gördüğü ve zamanlayıcı ile
+ * sınırlandırılmış sınav çözme ekranı.
+ */
 function QuizDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
+    
+    // Sınav Verisi State'leri
     const [quiz, setQuiz] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [answers, setAnswers] = useState({});
+    const [answers, setAnswers] = useState({}); // Kullanıcının işaretlediği şıklar { questionId: 'A' }
     
-    // YENİ: Sınavı tek sayfalık "kart" görünümünde sunmak için aktif soruyu tutan state
+    // UI State'leri
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
     // Zamanlayıcı state'leri
     const [timeLeft, setTimeLeft] = useState(null);
     const timerRef = useRef(null);
 
+    /**
+     * Sınav verisini (sorular ve süre bilgisi) API'den çeker.
+     * Bileşen ilk yüklendiğinde çalışır.
+     */
     useEffect(() => {
         const fetchQuizDetail = async () => {
             try {
                 const response = await axios.get(`http://localhost:8080/api/quizzes/${id}`);
                 setQuiz(response.data);
                 
-                // Eğer sınavın süresi varsa zamanlayıcıyı başlat
+                // Eğer sınavın süresi varsa zamanlayıcıyı (countdown) başlat
                 if (response.data.timeLimitSeconds && response.data.timeLimitSeconds > 0) {
                     setTimeLeft(response.data.timeLimitSeconds);
                 }
@@ -38,6 +49,10 @@ function QuizDetail() {
         fetchQuizDetail();
     }, [id]);
 
+    /**
+     * Zamanlayıcı (Countdown) Mantığı:
+     * timeLeft state'i 0'dan büyük olduğu sürece her saniye (1000ms) kendini bir azaltır.
+     */
     // Zamanlayıcı geri sayım efekti
     useEffect(() => {
         if (timeLeft === null || timeLeft <= 0) return;
@@ -84,7 +99,11 @@ function QuizDetail() {
         }
     };
 
+    /**
+     * Sınavı tamamlayıp cevapları backend'e gönderen fonksiyon.
+     */
     const handleSubmit = async () => {
+        // Obje formatındaki cevapları, backend'in beklediği dizi formuna dönüştür
         const answerList = Object.keys(answers).map(qId => ({
             questionId: parseInt(qId),
             selectedOption: answers[qId]
@@ -100,6 +119,7 @@ function QuizDetail() {
                 }
             });
 
+            // Başarılı olursa sonucu göster ve ana sayfaya dön
             alert("🎉 Tebrikler!\n\n" + response.data);
             navigate('/quizzes');
         } catch (error) {
@@ -108,6 +128,9 @@ function QuizDetail() {
         }
     };
 
+    /**
+     * Süre 0'a ulaştığında sınavı otomatik olarak (kullanıcı bitir demese de) gönderir.
+     */
     // Süre dolduğunda otomatik submit
     useEffect(() => {
         if (timeLeft === 0) {

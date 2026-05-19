@@ -2,20 +2,29 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * Login Bileşeni
+ * Kullanıcıların sisteme giriş yapmasını veya yeni kayıt oluşturmasını sağlayan 
+ * kimlik doğrulama sayfası.
+ */
 function Login() {
     const navigate = useNavigate();
 
     // Kullanıcının girdiği verileri tutacağımız hafıza alanları (State)
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [isLoginMode, setIsLoginMode] = useState(true); // Giriş mi Kayıt mı?
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoginMode, setIsLoginMode] = useState(true); // true = Giriş Yap, false = Kayıt Ol
+    const [isLoading, setIsLoading] = useState(false); // İşlem bekleniyor mu?
 
-    // Backend'in adresi
+    // Backend yetkilendirme uç noktası
     const API_URL = 'http://localhost:8080/api/auth';
 
+    /**
+     * Form gönderildiğinde (Submit) tetiklenir.
+     * Kullanıcının durumuna göre Login veya Register API'sini çağırır.
+     */
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Sayfanın yenilenmesini engelle
         if (!username || !password) {
             alert("Lütfen kullanıcı adı ve şifrenizi girin.");
             return;
@@ -24,7 +33,7 @@ function Login() {
         setIsLoading(true);
 
         if (isLoginMode) {
-            // Giriş Yap
+            // --- GİRİŞ YAPMA İŞLEMİ ---
             try {
                 const response = await axios.post(`${API_URL}/login`, {
                     username: username,
@@ -37,7 +46,7 @@ function Login() {
                 alert("Giriş başarısız! Lütfen bilgilerinizi kontrol edin.");
             }
         } else {
-            // Kayıt Ol
+            // --- KAYIT OLMA İŞLEMİ ---
             try {
                 const response = await axios.post(`${API_URL}/register`, {
                     username: username,

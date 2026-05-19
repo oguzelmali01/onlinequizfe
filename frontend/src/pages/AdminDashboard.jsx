@@ -2,16 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+/**
+ * AdminDashboard Bileşeni
+ * Yöneticilerin (ADMIN) sınav ekleme, düzenleme, silme ve tüm sistem kullanıcılarını 
+ * görüp detaylı geçmişlerini inceleyebildiği veya silebildiği ana yönetim paneli.
+ */
 function AdminDashboard() {
     const navigate = useNavigate();
     const [quizzes, setQuizzes] = useState([]);
     const [users, setUsers] = useState([]);
-    const [activeTab, setActiveTab] = useState('quizzes');
+    const [activeTab, setActiveTab] = useState('quizzes'); // 'quizzes' veya 'users'
     const [loading, setLoading] = useState(true);
 
-    // Yeni Sınav Formu State'leri
+    // Yeni Sınav Oluşturma/Düzenleme Formu State'leri
     const [showAddModal, setShowAddModal] = useState(false);
-    const [editQuizId, setEditQuizId] = useState(null); // Düzenlenen sınavın ID'si
+    const [editQuizId, setEditQuizId] = useState(null); // Eğer doluysa "Düzenleme", boşsa "Yeni Ekleme" modundadır
     const [newQuiz, setNewQuiz] = useState({
         title: '',
         description: '',
@@ -20,6 +25,11 @@ function AdminDashboard() {
         questions: []
     });
 
+    /**
+     * Bileşen ilk yüklendiğinde çalışır.
+     * Sunucudan tüm sınavları ve kullanıcıları eşzamanlı olarak (Promise.all) çeker.
+     * Eğer kullanıcının yetkisi yoksa veya token geçersizse, hata fırlatır ve ana sayfaya yönlendirir.
+     */
     useEffect(() => {
         const fetchAdminData = async () => {
             try {
@@ -44,6 +54,10 @@ function AdminDashboard() {
         fetchAdminData();
     }, [navigate]);
 
+    /**
+     * Sınav silme işlemini yönetir.
+     * @param {number} id Silinecek sınavın ID'si
+     */
     const handleDeleteQuiz = async (id) => {
         if (!window.confirm("Bu sınavı silmek istediğinize emin misiniz?")) return;
         
@@ -52,6 +66,7 @@ function AdminDashboard() {
             await axios.delete(`http://localhost:8080/api/admin/quizzes/${id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            // Başarılı silme işleminden sonra arayüzü güncelle
             setQuizzes(quizzes.filter(q => q.id !== id));
             alert("Sınav silindi.");
         } catch (error) {
@@ -103,7 +118,10 @@ function AdminDashboard() {
         setNewQuiz({ ...newQuiz, questions: updatedQuestions });
     };
 
-    // Form Gönderme
+    /**
+     * Form gönderildiğinde (Submit) çalışır.
+     * Yeni bir sınav ekleme veya mevcut sınavı güncelleme işlemlerini yapar.
+     */
     const handleSubmitNewQuiz = async (e) => {
         e.preventDefault();
         if (newQuiz.questions.length === 0) {
@@ -116,20 +134,21 @@ function AdminDashboard() {
             const config = { headers: { 'Authorization': `Bearer ${token}` } };
 
             if (editQuizId) {
-                // Güncelleme İşlemi (PUT)
+                // Düzenleme Modu: Mevcut sınavı PUT isteği ile güncelle
                 await axios.put(`http://localhost:8080/api/admin/quizzes/${editQuizId}`, newQuiz, config);
                 alert("Sınav başarıyla güncellendi!");
             } else {
-                // Yeni Ekleme İşlemi (POST)
+                // Yeni Ekleme Modu: POST isteği ile yeni sınav oluştur
                 await axios.post('http://localhost:8080/api/quizzes', newQuiz, config);
                 alert("Sınav başarıyla oluşturuldu!");
             }
             
+            // İşlem bitince formu temizle ve kapat
             setShowAddModal(false);
             setEditQuizId(null);
             setNewQuiz({ title: '', description: '', category: '', timeLimitSeconds: 0, questions: [] });
             
-            // Listeyi güncelle
+            // Güncel listeyi backend'den tekrar çek
             const response = await axios.get('http://localhost:8080/api/quizzes', config);
             setQuizzes(response.data);
             
@@ -139,9 +158,15 @@ function AdminDashboard() {
         }
     };
 
+    // Kullanıcı işlemleri state'leri
     const [selectedUser, setSelectedUser] = useState(null);
     const [userHistory, setUserHistory] = useState([]);
 
+    /**
+     * Belirli bir kullanıcının "Detaylar" butonuna tıklandığında çalışır.
+     * Kullanıcının geçmişte girdiği tüm sınavların detaylarını ve "Liderlik Puanı" hesaplama
+     * mantığına (sadece skor artışlarının kümülatif eklenmesi) göre gelişimini görüntüler.
+     */
     const handleViewUser = async (user) => {
         try {
             const token = localStorage.getItem('token');

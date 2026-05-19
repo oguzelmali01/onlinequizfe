@@ -5,12 +5,21 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
+/**
+ * Profile Bileşeni
+ * Sisteme giriş yapmış kullanıcının kendi detaylarını, Liderlik Puanını ve
+ * geçmiş sınav performanslarının grafiğini gördüğü sayfa.
+ */
 function Profile() {
     const navigate = useNavigate();
-    const [user, setUser] = useState(null);
-    const [history, setHistory] = useState([]);
+    const [user, setUser] = useState(null); // Aktif kullanıcı profili bilgileri
+    const [history, setHistory] = useState([]); // Kullanıcının çözdüğü sınavların geçmişi
     const [loading, setLoading] = useState(true);
 
+    /**
+     * Bileşen yüklendiğinde kullanıcının profil ve geçmiş sınav verilerini çeker.
+     * Grafik verileri (history) hesaplanırken sadece kümülatif puan artışı dikkate alınır.
+     */
     useEffect(() => {
         const fetchProfileData = async () => {
             try {
@@ -63,6 +72,9 @@ function Profile() {
         fetchProfileData();
     }, [navigate]);
 
+    /**
+     * Kullanıcının kendi hesabını kalıcı olarak silmesini sağlar.
+     */
     const handleDeleteProfile = async () => {
         if (window.confirm("Profilinizi silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve tüm geçmiş verileriniz silinir!")) {
             try {
@@ -71,8 +83,8 @@ function Profile() {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 alert("Profiliniz başarıyla silindi.");
-                localStorage.removeItem('token');
-                navigate('/');
+                localStorage.removeItem('token'); // Tarayıcıdan token'ı temizle
+                navigate('/'); // Ana sayfaya (Login ekranına) dön
             } catch (error) {
                 console.error("Profil silinirken hata oluştu!", error);
                 alert("Profil silinirken bir hata oluştu.");
@@ -80,6 +92,10 @@ function Profile() {
         }
     };
 
+    /**
+     * Recharts kütüphanesindeki çizgi grafiği (LineChart) için özel tooltip.
+     * Grafikteki noktaların üzerine gelindiğinde gösterilecek detayları belirler.
+     */
     // Custom Tooltip for Chart
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {

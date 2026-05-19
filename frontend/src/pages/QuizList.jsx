@@ -2,13 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+/**
+ * QuizList Bileşeni
+ * Uygulamanın ana sayfası niteliğindedir. 
+ * Kullanıcının katılabileceği sınavları, kendi puanını ve genel liderlik tablosunu listeler.
+ */
 function QuizList() {
     const navigate = useNavigate();
-    const [quizzes, setQuizzes] = useState([]);
-    const [userProfile, setUserProfile] = useState(null);
-    const [leaderboard, setLeaderboard] = useState([]);
+
+    // Uygulama State'leri
+    const [quizzes, setQuizzes] = useState([]); // Sistemdeki tüm sınavlar
+    const [userProfile, setUserProfile] = useState(null); // Giriş yapmış kullanıcının bilgileri
+    const [leaderboard, setLeaderboard] = useState([]); // Liderlik tablosu verisi
     const [loading, setLoading] = useState(true);
 
+    /**
+     * Bileşen ilk render edildiğinde veya navigate değiştiğinde çalışır.
+     * Sınavları, aktif kullanıcıyı ve liderlik tablosunu eşzamanlı olarak backend'den çeker.
+     * Geçersiz bir token durumunda (401/403) kullanıcıyı güvenli bir şekilde Login'e yönlendirir.
+     */
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -19,7 +31,7 @@ function QuizList() {
                     }
                 };
 
-                // Quizleri, Profili ve Liderlik Tablosunu aynı anda çek
+                // Quizleri, Profili ve Liderlik Tablosunu aynı anda (paralel) çek
                 const [quizzesRes, profileRes, leaderboardRes] = await Promise.all([
                     axios.get('http://localhost:8080/api/quizzes', config),
                     axios.get('http://localhost:8080/api/users/me', config),
@@ -34,7 +46,7 @@ function QuizList() {
                 console.error("Veriler çekerken hata oluştu!", error);
                 setLoading(false);
                 if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-                    // Token geçersizse veya yoksa login'e at
+                    // Token geçersizse (süresi dolmuş vb.) localStorage'ı temizle ve Login'e at
                     localStorage.removeItem('token');
                     navigate('/');
                 }
@@ -44,21 +56,28 @@ function QuizList() {
         fetchData();
     }, [navigate]);
 
+    /** Kullanıcının oturumunu güvenli bir şekilde kapatır */
     const handleLogout = () => {
         localStorage.removeItem('token');
         navigate('/');
     };
 
+    // Kategori Seçimi State'i (Varsayılan: Tümü)
     const [selectedCategory, setSelectedCategory] = useState("Tümü");
 
     if (loading) {
         return <div style={{ textAlign: 'center', marginTop: '50px', fontSize: '1.2em' }}>Sayfa yükleniyor... Lütfen bekleyin.</div>;
     }
 
-    // Benzersiz kategorileri bul
+    /** 
+     * Sistemdeki tüm benzersiz kategorileri Set objesi kullanarak tespit eder.
+     * Dropdown (Seçim menüsü) içerisinde dinamik olarak göstermek için kullanılır.
+     */
     const categories = ["Tümü", ...new Set(quizzes.map(q => q.category ? q.category.trim() : "Kategorisiz"))];
 
-    // Filtrelenmiş sınavlar
+    /**
+     * Kullanıcının seçtiği kategoriye göre ekranda gösterilecek sınavları filtreler.
+     */
     const filteredQuizzes = selectedCategory === "Tümü"
         ? quizzes
         : quizzes.filter(q => {
